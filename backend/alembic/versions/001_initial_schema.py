@@ -31,7 +31,10 @@ def upgrade() -> None:
         sa.Column("metadata", postgresql.JSONB(), nullable=True),
     )
 
-    workflow_status = postgresql.ENUM("running", "completed", "failed", name="workflow_status", create_type=True)
+    # create_type=False: table DDL must not emit CREATE TYPE (types may exist from a failed run).
+    workflow_status = postgresql.ENUM(
+        "running", "completed", "failed", name="workflow_status", create_type=False
+    )
     workflow_status.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
@@ -47,10 +50,14 @@ def upgrade() -> None:
         sa.Column("metadata", postgresql.JSONB(), nullable=True),
     )
 
-    node_type = postgresql.ENUM("retrieval", "tool", "llm", "postprocessing", name="node_type", create_type=True)
+    node_type = postgresql.ENUM(
+        "retrieval", "tool", "llm", "postprocessing", name="node_type", create_type=False
+    )
     node_type.create(op.get_bind(), checkfirst=True)
 
-    node_status = postgresql.ENUM("running", "completed", "failed", name="node_status", create_type=True)
+    node_status = postgresql.ENUM(
+        "running", "completed", "failed", name="node_status", create_type=False
+    )
     node_status.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
