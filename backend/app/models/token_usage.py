@@ -5,7 +5,7 @@ from sqlalchemy import Column, String, Float, Integer, ForeignKey, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.db_base import Base
 
 
 class TokenUsage(Base):

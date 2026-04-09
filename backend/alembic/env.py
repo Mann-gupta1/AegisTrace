@@ -11,7 +11,7 @@ if str(_backend_root) not in sys.path:
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-from app.database import Base
+from app.db_base import Base
 from app.models import *  # noqa: F401,F403
 
 config = context.config

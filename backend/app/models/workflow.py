@@ -5,7 +5,7 @@ from sqlalchemy import Column, String, DateTime, Float, Integer, Enum as SAEnum,
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.db_base import Base
 
 
 class WorkflowRun(Base):

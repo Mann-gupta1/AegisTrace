@@ -5,7 +5,7 @@ from sqlalchemy import Column, String, Text, Integer, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.db_base import Base
 
 
 class PromptVersion(Base):

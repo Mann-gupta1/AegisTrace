@@ -4,7 +4,7 @@ from sqlalchemy import Column, String, Text, Float, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.db_base import Base
 
 
 class ToolCall(Base):

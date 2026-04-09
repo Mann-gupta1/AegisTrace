@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from app.config import get_settings
-from app.database import Base
+from app.db_base import Base
 from app.models.workflow import WorkflowRun
 from app.models.node import NodeRun
 from app.models.llm_call import LLMCall

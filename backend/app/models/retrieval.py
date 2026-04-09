@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
-from app.database import Base
+from app.db_base import Base
 
 
 class RetrievalEvent(Base):
