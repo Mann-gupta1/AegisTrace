@@ -1,4 +1,3 @@
-import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -20,18 +19,34 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# Matches app.config defaults — if .env only sets DATABASE_URL (Neon), Alembic still needs a sync URL.
+_DEFAULT_LOCAL_SYNC = "postgresql://postgres:postgres@localhost:5432/aegistrace"
+
 
 def get_database_url() -> str:
-    """Sync URL for Alembic (psycopg2). Prefer DATABASE_URL_SYNC; else strip +asyncpg from DATABASE_URL."""
-    sync_url = os.environ.get("DATABASE_URL_SYNC")
-    if sync_url:
-        return sync_url
-    async_url = os.environ.get("DATABASE_URL", "")
-    if async_url.startswith("postgresql+asyncpg://"):
-        return async_url.replace("postgresql+asyncpg://", "postgresql://", 1)
-    if async_url.startswith("postgresql://"):
-        return async_url
-    return config.get_main_option("sqlalchemy.url") or ""
+    """Sync URL for Alembic (psycopg2).
+
+    Reads from pydantic Settings so `backend/.env` works. Plain `os.environ` does not
+    include .env file keys unless you export them in the shell (which caused localhost fallback).
+    """
+    from app.config import get_settings
+
+    s = get_settings()
+
+    def to_sync(url: str) -> str:
+        if url.startswith("postgresql+asyncpg://"):
+            return url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        return url
+
+    sync = to_sync(s.database_url_sync)
+    from_async = to_sync(s.database_url)
+
+    if sync != _DEFAULT_LOCAL_SYNC:
+        return sync
+    # Only DATABASE_URL set (e.g. Neon) — use same host for migrations
+    if from_async and from_async != _DEFAULT_LOCAL_SYNC:
+        return from_async
+    return sync or (config.get_main_option("sqlalchemy.url") or "")
 
 
 def run_migrations_offline() -> None:
