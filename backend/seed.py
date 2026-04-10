@@ -77,6 +77,7 @@ async def seed_data():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Short transactions: Neon pooler often drops one long open transaction mid-flight.
     async with async_sess() as db:
         prompt_versions = []
         for i, (name, template) in enumerate(PROMPT_TEMPLATES):
@@ -90,10 +91,12 @@ async def seed_data():
             db.add(pv)
             prompt_versions.append(pv)
         await db.flush()
+        await db.commit()
 
-        base_time = datetime.now(timezone.utc) - timedelta(days=7)
+    base_time = datetime.now(timezone.utc) - timedelta(days=7)
 
-        for wf_idx in range(25):
+    for wf_idx in range(25):
+        async with async_sess() as db:
             wf_name = random.choice(WORKFLOW_NAMES)
             wf_start = base_time + timedelta(hours=wf_idx * 6, minutes=random.randint(0, 59))
             wf_latency = random.uniform(800, 5000)
@@ -224,10 +227,12 @@ async def seed_data():
             wf.total_tokens = total_tokens
             wf.avg_confidence = round(sum(confidences) / len(confidences), 4) if confidences else None
 
-        await db.commit()
+            await db.commit()
 
-    await engine.dispose()
-    print(f"Seeded 25 workflow runs with nodes, LLM calls, retrievals, tool calls, and {len(prompt_versions)} prompt versions.")
+    print(
+        f"Seeded 25 workflow runs with nodes, LLM calls, retrievals, tool calls, "
+        f"and {len(PROMPT_TEMPLATES)} prompt versions."
+    )
 
 
 if __name__ == "__main__":
