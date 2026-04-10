@@ -37,11 +37,25 @@ async def health():
 
 @app.get("/health/db")
 async def health_db():
-    """Checks Neon/Postgres connectivity (asyncpg + TLS)."""
+    """Checks DB connectivity and that Alembic tables exist (SELECT 1 alone is not enough)."""
     try:
         async with async_session() as session:
             await session.execute(text("SELECT 1"))
-        return {"status": "ok", "database": "reachable"}
+            r = await session.execute(
+                text(
+                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name = 'workflow_runs')"
+                )
+            )
+            has_workflow_runs = bool(r.scalar())
+        body = {
+            "status": "ok",
+            "database": "reachable",
+            "workflow_runs_table": has_workflow_runs,
+        }
+        if not has_workflow_runs:
+            body["hint"] = "Run migrations: alembic upgrade head (Render build command)"
+        return body
     except Exception as exc:
         return JSONResponse(
             status_code=503,

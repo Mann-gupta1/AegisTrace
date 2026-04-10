@@ -1,5 +1,6 @@
-from pydantic import BaseModel
-from typing import Optional
+from typing import Any, Optional
+
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from uuid import UUID
 
@@ -13,9 +14,30 @@ class WorkflowRunResponse(BaseModel):
     total_latency_ms: Optional[float] = None
     total_tokens: Optional[int] = None
     avg_confidence: Optional[float] = None
-    metadata: Optional[dict] = None
+    metadata: Optional[Any] = None
 
     model_config = {"from_attributes": True}
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def status_to_str(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return str(getattr(v, "value", v))
+
+    @field_validator("total_latency_ms", "avg_confidence", mode="before")
+    @classmethod
+    def float_from_decimal(cls, v: object) -> float | None:
+        if v is None:
+            return None
+        return float(v)
+
+    @field_validator("total_tokens", mode="before")
+    @classmethod
+    def int_from_numeric(cls, v: object) -> int | None:
+        if v is None:
+            return None
+        return int(v)
 
 
 class NodeRunResponse(BaseModel):
@@ -32,6 +54,20 @@ class NodeRunResponse(BaseModel):
     order_index: int
 
     model_config = {"from_attributes": True}
+
+    @field_validator("node_type", "status", mode="before")
+    @classmethod
+    def enum_to_str(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return str(getattr(v, "value", v))
+
+    @field_validator("latency_ms", mode="before")
+    @classmethod
+    def float_from_decimal(cls, v: object) -> float | None:
+        if v is None:
+            return None
+        return float(v)
 
 
 class LLMCallResponse(BaseModel):

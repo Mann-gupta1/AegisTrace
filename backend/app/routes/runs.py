@@ -1,10 +1,8 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, desc
+from sqlalchemy import String, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
 from app.database import get_db
 from app.models.workflow import WorkflowRun
 from app.models.node import NodeRun
@@ -33,7 +31,8 @@ async def list_runs(
 ):
     stmt = select(WorkflowRun).order_by(desc(WorkflowRun.start_time)).limit(limit).offset(offset)
     if status:
-        stmt = stmt.where(WorkflowRun.status == status)
+        # Cast avoids asyncpg/PostgreSQL enum vs plain-text comparison errors.
+        stmt = stmt.where(cast(WorkflowRun.status, String) == status)
     result = await db.execute(stmt)
     runs = result.scalars().all()
     return [
@@ -57,7 +56,9 @@ async def runs_summary(db: AsyncSession = Depends(get_db)):
     total_stmt = select(func.count()).select_from(WorkflowRun)
     total = (await db.execute(total_stmt)).scalar() or 0
 
-    active_stmt = select(func.count()).select_from(WorkflowRun).where(WorkflowRun.status == "running")
+    active_stmt = select(func.count()).select_from(WorkflowRun).where(
+        cast(WorkflowRun.status, String) == "running"
+    )
     active = (await db.execute(active_stmt)).scalar() or 0
 
     avg_lat_stmt = select(func.avg(WorkflowRun.total_latency_ms)).where(WorkflowRun.total_latency_ms.isnot(None))
