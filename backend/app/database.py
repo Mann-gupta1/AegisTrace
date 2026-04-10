@@ -1,13 +1,50 @@
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
 from app.db_base import Base
 
-settings = get_settings()
-
 __all__ = ["Base", "engine", "async_session", "get_db"]
 
-engine = create_async_engine(settings.database_url, echo=False)
+
+def _asyncpg_url_and_connect_args(url: str) -> tuple[str, dict]:
+    """asyncpg does not accept libpq params like sslmode= or channel_binding= as kwargs."""
+    parsed = urlparse(url)
+    pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    new_pairs: list[tuple[str, str]] = []
+    ssl_required = False
+    for key, val in pairs:
+        lk = key.lower()
+        if lk == "sslmode":
+            if val.lower() in ("require", "verify-full", "verify-ca", "prefer", "allow"):
+                ssl_required = True
+            continue
+        if lk == "channel_binding":
+            continue
+        new_pairs.append((key, val))
+
+    host = (parsed.hostname or "").lower()
+    if "neon.tech" in host:
+        ssl_required = True
+
+    connect_args: dict = {}
+    if ssl_required:
+        connect_args["ssl"] = True
+
+    new_query = urlencode(new_pairs)
+    cleaned = urlunparse(parsed._replace(query=new_query))
+    return cleaned, connect_args
+
+
+settings = get_settings()
+_db_url, _connect_args = _asyncpg_url_and_connect_args(settings.database_url)
+
+engine = create_async_engine(
+    _db_url,
+    echo=False,
+    connect_args=_connect_args,
+)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
