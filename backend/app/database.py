@@ -1,3 +1,4 @@
+import ssl
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -30,7 +31,8 @@ def _asyncpg_url_and_connect_args(url: str) -> tuple[str, dict]:
 
     connect_args: dict = {}
     if ssl_required:
-        connect_args["ssl"] = True
+        # True is not always enough on hosted Postgres; default context verifies TLS correctly.
+        connect_args["ssl"] = ssl.create_default_context()
 
     new_query = urlencode(new_pairs)
     cleaned = urlunparse(parsed._replace(query=new_query))
@@ -44,6 +46,7 @@ engine = create_async_engine(
     _db_url,
     echo=False,
     connect_args=_connect_args,
+    pool_pre_ping=True,
 )
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

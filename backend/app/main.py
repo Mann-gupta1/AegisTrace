@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.config import get_settings
+from app.database import async_session
 from app.routes import traces, runs, analytics, prompts, retrieval
 
 settings = get_settings()
@@ -30,3 +33,21 @@ app.include_router(retrieval.router, prefix="/retrieval-quality", tags=["Retriev
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "aegistrace-collector"}
+
+
+@app.get("/health/db")
+async def health_db():
+    """Checks Neon/Postgres connectivity (asyncpg + TLS)."""
+    try:
+        async with async_session() as session:
+            await session.execute(text("SELECT 1"))
+        return {"status": "ok", "database": "reachable"}
+    except Exception as exc:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "error",
+                "database": "unreachable",
+                "error_type": type(exc).__name__,
+            },
+        )

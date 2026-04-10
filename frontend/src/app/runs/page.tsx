@@ -13,7 +13,7 @@ const FILTERS = [
 
 export default function RunsPage() {
   const [status, setStatus] = useState("");
-  const { data: runs, isLoading } = useRuns(status || undefined);
+  const { data: runs, error, isLoading } = useRuns(status || undefined);
 
   return (
     <div>
@@ -48,6 +48,21 @@ export default function RunsPage() {
         {isLoading ? (
           <div className="flex h-40 items-center justify-center text-muted-foreground">
             Loading runs...
+          </div>
+        ) : error ? (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
+            <p className="font-medium">Could not load runs from the API.</p>
+            <p className="mt-2 text-red-200/80">
+              Set{" "}
+              <code className="rounded bg-black/30 px-1 py-0.5 font-mono text-xs">
+                NEXT_PUBLIC_API_URL
+              </code>{" "}
+              on Vercel to your Render URL (no trailing slash), and add your Vercel origin to{" "}
+              <code className="rounded bg-black/30 px-1 py-0.5 font-mono text-xs">
+                ALLOWED_ORIGINS
+              </code>{" "}
+              on Render.
+            </p>
           </div>
         ) : runs?.length ? (
           <RunsTable runs={runs} />
